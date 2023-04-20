@@ -48,4 +48,72 @@ namespace webApi.Migrations
 #pragma warning restore 612, 618
         }
     }
-}
+
+
+public static class ProductEndpoints
+{
+	public static void MapProductEndpoints (this IEndpointRouteBuilder routes)
+    {
+        routes.MapGet("/api/Product", async (ProductContex db) =>
+        {
+            return await db.Products.ToListAsync();
+        })
+        .WithName("GetAllProducts")
+        .Produces<List<Product>>(StatusCodes.Status200OK);
+
+        routes.MapGet("/api/Product/{id}", async (int Id, ProductContex db) =>
+        {
+            return await db.Products.FindAsync(Id)
+                is Product model
+                    ? Results.Ok(model)
+                    : Results.NotFound();
+        })
+        .WithName("GetProductById")
+        .Produces<Product>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound);
+
+        routes.MapPut("/api/Product/{id}", async (int Id, Product product, ProductContex db) =>
+        {
+            var foundModel = await db.Products.FindAsync(Id);
+
+            if (foundModel is null)
+            {
+                return Results.NotFound();
+            }
+
+            db.Update(product);
+
+            await db.SaveChangesAsync();
+
+            return Results.NoContent();
+        })
+        .WithName("UpdateProduct")
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status204NoContent);
+
+        routes.MapPost("/api/Product/", async (Product product, ProductContex db) =>
+        {
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+            return Results.Created($"/Products/{product.Id}", product);
+        })
+        .WithName("CreateProduct")
+        .Produces<Product>(StatusCodes.Status201Created);
+
+
+        routes.MapDelete("/api/Product/{id}", async (int Id, ProductContex db) =>
+        {
+            if (await db.Products.FindAsync(Id) is Product product)
+            {
+                db.Products.Remove(product);
+                await db.SaveChangesAsync();
+                return Results.Ok(product);
+            }
+
+            return Results.NotFound();
+        })
+        .WithName("DeleteProduct")
+        .Produces<Product>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound);
+    }
+}}
